@@ -99,6 +99,7 @@ class Widget(QWidget):
         # f = self.w3.x
         # phi = self.w4.x
         # x0 = self.w5.x
+        
 
         # data = self.f(self.domain, k=k, alpha=alpha, f=f, phi=phi, x0=x0)
         # self.curve.setData(data)
