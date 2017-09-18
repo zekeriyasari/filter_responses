@@ -12,39 +12,49 @@ from functools import partial
 
 class Slider(QWidget):
     """Slider object."""
-    def __init__(self, minimum, maximum):
+
+    def __init__(self, minimum, maximum, name=''):
         super(Slider, self).__init__()
-        self.verticalLayout = QVBoxLayout(self)
-        self.label = QLabel(self)
-        self.verticalLayout.addWidget(self.label)
-        self.horizontalLayout = QHBoxLayout()
-        spacerItem = QSpacerItem(0, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
-        self.slider = QSlider(self)
-        self.slider.setOrientation(Qt.Vertical)
-        self.horizontalLayout.addWidget(self.slider)
-        spacerItem1 = QSpacerItem(0, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem1)
-        self.verticalLayout.addLayout(self.horizontalLayout)
-        self.resize(self.sizeHint())
 
         self.minimum = minimum
         self.maximum = maximum
-        self.slider.valueChanged.connect(self.setLabelValue)
-        self.x = None
+        self.name = name
+        self.value = None
+
+        self.verticalLayout = QVBoxLayout(self)  # Vertical layout
+        self.horizontalLayout = QHBoxLayout()  # Horizontal layout
+        self.slider = QSlider(self)  # Slider
+        self.label = QLabel(self)  # Label
+
+        self.verticalLayout.addWidget(self.label)
+
+        spacerItem = QSpacerItem(0, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+
+        self.slider.setOrientation(Qt.Vertical)
+        self.horizontalLayout.addWidget(self.slider)
+
+        spacerItem1 = QSpacerItem(0, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem1)
+
+        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.resize(self.sizeHint())
+
+        self.slider.valueChanged.connect(self.set_label_value)
         self.setLabelValue(self.slider.value())
 
-    def setLabelValue(self, value):
+    def set_label_value(self, value):
         """Set label of the Slider."""
-        self.x = self.minimum + (float(value) / (self.slider.maximum() - self.slider.minimum())) * (
+        self.value = self.minimum + (float(value) / (self.slider.maximum() - self.slider.minimum())) * (
             self.maximum - self.minimum)
-        self.label.setText("{0:.4g}".format(self.x))
+        self.label.setText("{0:.4g}".format(self.value))
 
 
 class Widget(QWidget):
     """
     Plotting GUI of a function with control variables.
     """
+
     def __init__(self, f, slider_controls, domain=np.linspace(0, 1, 1000), win_title='', plot_title='', color='r'):
         super(Widget, self).__init__()
 
@@ -74,7 +84,13 @@ class Widget(QWidget):
     def update(self):
         """Read slider values and update the curve of the function"""
         sig = signature(self.f)
-        params = sig.parameters.keys()[1:]  # It is assumed that the first parameter is not keyword.
+        func_params = sig.parameters.keys()[1:]  # It is assumed that the first parameter is not keyword.
+        kwargs = dict()
+        for slider_control in self.slider_controls:
+            if slider_control.name in func_params:
+                kwargs[slider_control.label] = slider_control.value
+        data = self.f(self.domain, **kwargs)
+        self.curve.setData(data)
 
         # TODO: Read the sliders and wrap self.f accordingly.
         # func = partial(self.f, *args, **kwargs)
@@ -84,24 +100,31 @@ class Widget(QWidget):
         # phi = self.w4.x
         # x0 = self.w5.x
 
-        data = self.f(self.domain, k=k, alpha=alpha, f=f, phi=phi, x0=x0)
-        self.curve.setData(data)
+        # data = self.f(self.domain, k=k, alpha=alpha, f=f, phi=phi, x0=x0)
+        # self.curve.setData(data)
 
 
-if __name__ == '__main__':
-    # Define function to be plotted.
+def test_gui():
+    """Test function for the GUI"""
+
+    # Test function
     def f(t, k=1., alpha=0.5, f0=1., phi=0., x0=0.):
         return k * np.exp(-alpha * t) * np.cos(2 * np.pi * f0 * t + phi) + x0
 
-    # Define slider for function parameters.
+    # Sliders
     amplitude_slider = Slider(1, 10)
     damping_slider = Slider(0, 1)
     frequency_slider = Slider(1, 10)
     phase_slider = Slider(0, np.pi)
     offset_slider = Slider(0, 10)
-    sliders = [amplitude_slider, damping_slider, phase_slider, offset_slider]
+    sliders = [amplitude_slider, damping_slider, frequency_slider, phase_slider, offset_slider]
 
+    # Start the GUI
     app = QApplication(sys.argv)
     w = Widget(f, sliders)
     w.show()
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    test_gui()
