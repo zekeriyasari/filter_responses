@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QSli
 import pyqtgraph as pg
 import numpy as np
 from inspect import signature
+from matplotlib.colors import CSS4_COLORS
 
 
 class Slider(QWidget):
@@ -42,66 +43,86 @@ class Slider(QWidget):
     def set_label_value(self, value):
         self.value = self.minimum + (float(value) / (self.slider.maximum() - self.slider.minimum())) * (
             self.maximum - self.minimum)
-        self.label.setText("{0:.4g}".format(self.value))
+        self.label.setText("{0}={1:.4g}".format(self.name, self.value))
 
 
 class Widget(QWidget):
     """Plotting widget"""
-    def __init__(self, func, control_sliders, domain=np.linspace(0, 10, 1000),
-                 win_title='', plt_title='', color='r', parent=None):
+
+    def __init__(self, pairs, domain=np.linspace(0, 5, 1000),
+                 win_title='', plt_title='', parent=None):
 
         super(Widget, self).__init__(parent=parent)
 
-        self.func = func
-        self.control_sliders = control_sliders
+        self.pairs = pairs  # Function and control parameters
         self.domain = domain
         self.win_title = win_title
         self.plt_title = plt_title
-        self.color = color
+        self.colors = tuple(CSS4_COLORS.values())
 
         self.horizontalLayout = QHBoxLayout(self)
 
-        for control_slider in self.control_sliders:
-            self.horizontalLayout.addWidget(control_slider)
-
         self.win = pg.GraphicsWindow(title=self.win_title)
+        self.palette = self.win.addPlot(title=self.plt_title)
+        self.palette.setLabel('left', 'y')
+        self.palette.setLabel('bottom', 'x')
         self.horizontalLayout.addWidget(self.win)
-        self.p6 = self.win.addPlot(title=self.plt_title)
-        self.p6.setLabel('left', 'y')
-        self.p6.setLabel('bottom', 'x')
-        self.curve = self.p6.plot(pen=self.color)
+
+        # Construct the sliders
+        self.funcs = []
+        for func, params in self.pairs:
+            if func and params:
+                self.palette.addLegend(offset=np.random.randint(100))
+                func.curve = self.palette.plot(pen=self.colors[np.random.randint(138)],
+                                               name=func.__name__)  # Plot the curve
+                func.sliders = []
+                for parameter, interval in params.items():
+                    min_val, max_val = interval
+                    slider = Slider(min_val, max_val, name=parameter)
+                    self.horizontalLayout.addWidget(slider)
+                    func.sliders.append(slider)
+                self.funcs.append(func)
 
         self.update()
-        for control_slider in self.control_sliders:
-            control_slider.slider.valueChanged.connect(lambda: self.update())
+
+        for func in self.funcs:
+            control_sliders = func.sliders
+            for control_slider in control_sliders:
+                control_slider.slider.valueChanged.connect(lambda: self.update())
 
     def update(self):
-        sig = signature(self.func)
-        params = dict()
-        for control_slider in self.control_sliders:
-            if control_slider.name in sig.parameters.keys():
-                params[control_slider.name] = control_slider.value
-        data = self.func(self.domain, **params)
-        self.curve.setData(x=self.domain, y=data)
+        for func in self.funcs:
+            curve = func.curve
+            control_sliders = func.sliders
+            sig = signature(func)
+            params = dict()
+            for control_slider in control_sliders:
+                if control_slider.name in sig.parameters.keys():
+                    params[control_slider.name] = control_slider.value
+            data = func(self.domain, **params)
+            curve.setData(x=self.domain, y=data)
 
 
 if __name__ == '__main__':
     # Launch Qt GUI application
     app = QApplication(sys.argv)
 
+
     # Test function
-    def f(x, k=1., alpha=0.5, f0=1., phi=0., x0=0.):
-        return k * np.exp(-alpha * x) * np.cos(2 * np.pi * f0 * x + phi) + x0
+    def f1(x, k1=1., alpha1=0.5, f01=1., phi1=0., x01=0.):
+        return k1 * np.exp(-alpha1 * x) * np.cos(2 * np.pi * f01 * x + phi1) + x01
+
+
+    # Test function
+    def f2(x, k2=1., alpha2=0.5, f02=1., phi2=0., x02=0.):
+        return k2 * np.exp(-alpha2 * x) * np.sin(2 * np.pi * f02 * x + phi2) + x02
+
 
     # Control sliders of test function.
-    amplitude_slider = Slider(1, 10, name='k')
-    damping_slider = Slider(0, 1, name='alpha')
-    frequency_slider = Slider(1, 10, name='f0')
-    phase_slider = Slider(0., np.pi, name='phi')
-    offset_slider = Slider(0, 10, name='x0')
-    control_sliders = (amplitude_slider, damping_slider, frequency_slider, phase_slider, offset_slider)
+    pair = ((f1, {'k1': (1, 10), 'alpha1': (0, 1), 'f01': (1, 10), 'phi1': (0, np.pi), 'x01': (0, 10)}),
+            (f2, {'k2': (1, 10), 'alpha2': (0, 1), 'f02': (1, 10), 'phi2': (0, np.pi/6), 'x02': (0, 10)}))
 
     # Start the application
-    w = Widget(f, control_sliders)
+    w = Widget(pair)
     w.show()
     sys.exit(app.exec_())
