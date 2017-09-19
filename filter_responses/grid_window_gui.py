@@ -108,13 +108,13 @@ def test_gui():
 
     # Test function
     def f2(x, k2=1., alpha2=0.5, f02=1., phi2=0., x02=0.):
-        f2.label = 'phase'
+        f2.label = 'mag'
         return k2 * np.exp(-alpha2 * x) * np.sin(2 * np.pi * f02 * x + phi2) + x02
 
         # Test function
 
     def f3(x, k3=1., alpha3=0.5, f03=1., phi3=0., x03=0.):
-        f3.label = 'nyq'
+        f3.label = 'mag'
         return k3 * np.exp(-alpha3 * x) * np.cos(2 * np.pi * f03 * x + phi3) + x03
 
         # Test function
@@ -124,13 +124,13 @@ def test_gui():
         return k4 * np.exp(-alpha4 * x) * np.sin(2 * np.pi * f04 * x + phi4) + x04
 
     def f5(x, k5=1., alpha5=0.5, f05=1., phi5=0., x05=0.):
-        f5.label = 'phase'
+        f5.label = 'mag'
         return k5 * np.exp(-alpha5 * x) * np.cos(2 * np.pi * f05 * x + phi5) + x05
 
         # Test function
 
     def f6(x, k6=1., alpha6=0.5, f06=1., phi6=0., x06=0.):
-        f6.label = 'nyq'
+        f6.label = 'mag'
         return k6 * np.exp(-alpha6 * x) * np.sin(2 * np.pi * f06 * x + phi6) + x06
 
     # Control sliders of test function.
@@ -150,4 +150,30 @@ def test_gui():
 
 
 if __name__ == '__main__':
-    test_gui()
+    # Launch the Qt application.
+    app = QApplication(sys.argv)
+
+
+    def normal_butterworth_mag(w, n=2):
+        normal_butterworth_mag.label = 'mag'
+        return 1 / np.sqrt(1 + w ** (2 * n))
+
+
+    def normal_chebyshev_mag(w, n=2, ripple=0.5):
+        normal_chebyshev_mag.label = 'mag'
+        epsilon = np.sqrt(10 ** (ripple / 10) - 1)
+        if abs(w) <= 1:
+            cheby_poly = np.cos(n * np.arccos(w))
+        else:
+            cheby_poly = np.cosh(n * np.arccosh(w))
+        return 1 / np.sqrt(1 + (epsilon * cheby_poly) ** 2)
+        # Control sliders of test function.
+
+
+    pair = ((normal_butterworth_mag, {'n': (2, 10)}),
+            (normal_chebyshev_mag, {'n': (2, 10), 'ripple': (0.1, 5)}))
+
+    # Start the application
+    w = GUI(pair, domain=np.logspace(-1, 5, 1000), log_scale=True, win_labels=('mag', 'phase', 'nyq'))
+    w.show()
+    sys.exit(app.exec_())
