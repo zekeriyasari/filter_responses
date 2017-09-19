@@ -2,7 +2,7 @@ import sys
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 
-from filter_responses import *
+from filter_responses.single_window_gui import *
 
 # Launch the Qt application.
 app = QApplication(sys.argv)

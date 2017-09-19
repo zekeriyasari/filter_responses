@@ -68,6 +68,19 @@ class Slider(QWidget):
         self.label.setStyleSheet('color: ' + self.color)
 
 
+class SliderBlock(QWidget):
+    """
+    Group of Sliders
+    """
+
+    def __init__(self, sliders):
+        super().__init__()
+        self.sliders = sliders
+        self.horizontalLayout = QHBoxLayout(self)
+        for slider in self.sliders:
+            self.horizontalLayout.addWidget(slider)
+
+
 class Widget(QWidget):
     """
     Plotting widget to plot parametric plots.
