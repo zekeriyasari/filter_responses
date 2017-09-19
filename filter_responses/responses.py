@@ -65,3 +65,4 @@ w = Widget(pair, domain=np.logspace(-1, 5, 1000), log_scale=True,
            xlabel='w[log]', ylabel='Magnitude')
 w.show()
 sys.exit(app.exec_())
+
