@@ -16,13 +16,11 @@ from inspect import signature
 from functools import partial
 from matplotlib.colors import CSS4_COLORS
 
-__all__ = ['Slider', 'Widget']
-
 
 class Slider(QWidget):
     """
     Slider widget for parameter control of the plots.
-    
+
     Attributes
     ----------
     minimum: int,
@@ -33,7 +31,7 @@ class Slider(QWidget):
         Name of the slider.
     """
 
-    def __init__(self, minimum, maximum, name='', color='black', parent=None):
+    def __init__(self, minimum=0, maximum=1, name='', color='black', parent=None):
         super(Slider, self).__init__(parent=parent)
 
         self.name = name
@@ -73,24 +71,24 @@ class Slider(QWidget):
 class Widget(QWidget):
     """
     Plotting widget to plot parametric plots.
-    
+
     Attributes
     ----------
     pairs: Tuple[Tuple[callable, dict]]
         Tuple of functions and corresponding parameters. Consider that we are to plot the functions
-        
+
         .. math ::
             \begin{equation}
             \begin{split}
                 & f_1(t, \alpha_1, \alpha_2, \ldots, \alpha_K) \\
-                & f_2(t, \beta_1, \beta_2, \ldots, \beta_L) 
+                & f_2(t, \beta_1, \beta_2, \ldots, \beta_L)
             \end{split}
             \end{equation}
-        
+
         for some control parameters `` \alpha_1 \in [m_{\alpha_1}, M_{\alpha_1}, \ldots, m_{\alpha_K}, M_{\alpha_K}]``
         and ``m_{\beta_1}, M_{\beta_1}, \ldots, m_{\beta_1}, M_{\beta_1}``, where ``m_{\alpha_i}`` and ``M_{\alpha_i}``
         is the minimum and maximum value of the parameter ``\alpha_i``. Then ``pairs`` is provided as
-        
+
         pairs = (f_1, {'\alpha_1': (m_{\alpha_1}, M_{\alpha_1}), \ldots, '\alpha_1': (m_{\alpha_K}, M_{\alpha_K})}
                 f_2, {'\beta_1': (m_{\beta_1}, M_{\beta_1}), \ldots, '\beta_1': (m_{\beta_K}, M_{\beta_K})})
     domain: numpy.ndarray,
