@@ -13,7 +13,10 @@ from PyQt5.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QSli
 import pyqtgraph as pg
 import numpy as np
 from inspect import signature
+from functools import partial
 from matplotlib.colors import CSS4_COLORS
+
+__all__ = ['Slider', 'Widget']
 
 
 class Slider(QWidget):
@@ -30,13 +33,14 @@ class Slider(QWidget):
         Name of the slider.
     """
 
-    def __init__(self, minimum, maximum, name='', parent=None):
+    def __init__(self, minimum, maximum, name='', color='black', parent=None):
         super(Slider, self).__init__(parent=parent)
 
         self.name = name
         self.minimum = minimum
         self.maximum = maximum
         self.value = None
+        self.color = color
 
         self.verticalLayout = QVBoxLayout(self)
         self.horizontalLayout = QHBoxLayout()
@@ -63,6 +67,7 @@ class Slider(QWidget):
         self.value = self.minimum + (float(value) / (self.slider.maximum() - self.slider.minimum())) * (
             self.maximum - self.minimum)
         self.label.setText("{0}={1:.4g}".format(self.name, self.value))
+        self.label.setStyleSheet('color: ' + self.color)
 
 
 class Widget(QWidget):
@@ -96,23 +101,26 @@ class Widget(QWidget):
         Title of the plots
     """
 
-    def __init__(self, pairs, domain=np.linspace(0, 5, 1000),
-                 win_title='', plt_title='', parent=None):
+    def __init__(self, pairs, domain=np.linspace(0, 5, 1000), log_scale=False,
+                 win_title='', plt_title='', xlabel='', ylabel='', parent=None):
 
         super(Widget, self).__init__(parent=parent)
 
         self.pairs = pairs  # Function and control parameters
         self.domain = domain
+        self.log_scale = log_scale
         self.win_title = win_title
         self.plt_title = plt_title
+        self.xlabel = xlabel
+        self.ylabel = ylabel
         self.colors = tuple(CSS4_COLORS.values())
 
         self.horizontalLayout = QHBoxLayout(self)
 
         self.win = pg.GraphicsWindow(title=self.win_title)
         self.palette = self.win.addPlot(title=self.plt_title)
-        self.palette.setLabel('left', 'y')
-        self.palette.setLabel('bottom', 'x')
+        self.palette.setLabel('left', self.ylabel)
+        self.palette.setLabel('bottom', self.xlabel)
         self.horizontalLayout.addWidget(self.win)
 
         # Construct the sliders
@@ -120,12 +128,15 @@ class Widget(QWidget):
         for func, params in self.pairs:
             if func and params:
                 self.palette.addLegend(offset=np.random.randint(100))
-                func.curve = self.palette.plot(pen=self.colors[np.random.randint(138)],
+                if self.log_scale:
+                    self.palette.setLogMode(x=True, y=False)
+                pen_color = self.colors[np.random.randint(138)]
+                func.curve = self.palette.plot(pen=pen_color,
                                                name=func.__name__)  # Plot the curve
                 func.sliders = []
                 for parameter, interval in params.items():
                     min_val, max_val = interval
-                    slider = Slider(min_val, max_val, name=parameter)
+                    slider = Slider(min_val, max_val, name=parameter, color=pen_color)
                     self.horizontalLayout.addWidget(slider)
                     func.sliders.append(slider)
                 self.funcs.append(func)
@@ -146,11 +157,13 @@ class Widget(QWidget):
             for control_slider in control_sliders:
                 if control_slider.name in sig.parameters.keys():
                     params[control_slider.name] = control_slider.value
-            data = func(self.domain, **params)
+            func_ = partial(func, **params)
+            data = np.array([func_(x) for x in self.domain])  # Iterative calculation may be slow!
             curve.setData(x=self.domain, y=data)
 
 
-def test_func():  # Launch Qt GUI application
+def test_func():
+    # Launch Qt GUI application
     app = QApplication(sys.argv)
 
     # Test function
