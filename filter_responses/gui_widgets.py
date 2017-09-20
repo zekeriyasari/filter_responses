@@ -176,7 +176,7 @@ class Widget(QWidget):
             curve.setData(x=self.domain, y=data)
 
 
-def test_func():
+def main():
     # Launch Qt GUI application
     app = QApplication(sys.argv)
 
@@ -199,4 +199,4 @@ def test_func():
 
 
 if __name__ == '__main__':
-    test_func()
+    main()

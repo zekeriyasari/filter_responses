@@ -6,21 +6,19 @@ from PyQt5.QtWidgets import QGroupBox, QGridLayout
 
 class GUI(QWidget):
     def __init__(self, pairs, domain=np.linspace(0, 5, 1000), log_scale=False,
-                 win_labels=(), xlabel='', ylabel='', ):
+                 win_labels=(), ):
         super().__init__()
         self.pairs = pairs
         self.domain = domain
         self.log_scale = log_scale
-        self.xlabel = xlabel
-        self.ylabel = ylabel
         self.win_labels = win_labels
         self.colors = tuple(CSS4_COLORS.values())
 
         # Match GUI windows with functions and sliders
         self.gui_wins = []
         self.gui_sliders = []
-        for win_label in self.win_labels:
-            win = self.get_graphics_window(label=win_label)
+        for win_label in self.win_labels.keys():
+            win = self.get_graphics_window(label=win_label, log_scale=self.log_scale)
             win.funcs = []
             for func, params in self.pairs:
                 func(0)  # Dummy call to label the func.
@@ -71,14 +69,15 @@ class GUI(QWidget):
         window_layout.addWidget(self.horizontalGroupBox)
         self.setLayout(window_layout)
 
-    def get_graphics_window(self, window_title='', plot_title='', xlabel='', ylabel='', label=''):
+    def get_graphics_window(self, window_title='', plot_title='', xlabel='', ylabel='', label='', log_scale=False):
         """Get a graphic window."""
         win = pg.GraphicsWindow(title=window_title)
-        win.palette = win.addPlot(title=plot_title)
-        win.palette.setLabel('left', ylabel)
-        win.palette.setLabel('bottom', xlabel)
+        win.palette = win.addPlot(title=self.win_labels[label][0])
+        win.palette.setLabel('bottom', self.win_labels[label][1])
+        win.palette.setLabel('left', self.win_labels[label][2])
         win.palette.addLegend(offset=np.random.randint(100))
-        if self.log_scale:
+        win.palette.showGrid(x=True, y=True)
+        if log_scale:
             win.palette.setLogMode(x=True, y=False)
         win.label = label
         return win
@@ -96,10 +95,10 @@ class GUI(QWidget):
                 func_ = partial(func, **params)
                 # data = np.array([func_(x) for x in self.domain]).flatten()  # Iterative calculation may be slow!
                 data = func_(self.domain)
-                curve.setData(x=self.domain, y=data)
+                curve.setData(x=data[0], y=data[1])
 
 
-def test_gui():
+def main():
     # Launch Qt GUI application
     app = QApplication(sys.argv)
 
@@ -156,32 +155,13 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
 
-    # def normal_butterworth_mag(w, n=2):
-    #     normal_butterworth_mag.label = 'mag'
-    #     return 1 / np.sqrt(1 + w ** (2 * n))
-    #
-    #
-    # def normal_chebyshev_mag(w, n=2, ripple=0.5):
-    #     normal_chebyshev_mag.label = 'mag'
-    #     epsilon = np.sqrt(10 ** (ripple / 10) - 1)
-    #     if abs(w) <= 1:
-    #         cheby_poly = np.cos(n * np.arccos(w))
-    #     else:
-    #         cheby_poly = np.cosh(n * np.arccosh(w))
-    #     return 1 / np.sqrt(1 + (epsilon * cheby_poly) ** 2)
-    #     # Control sliders of test function.
-
-
-    # pair = ((normal_butterworth_mag, {'n': (2, 10)}),
-    #         (normal_chebyshev_mag, {'n': (2, 10), 'ripple': (0.1, 5)}))
-
     def butter_hw_mag(w, n=4):
         n = int(n)
         if not hasattr(butter_hw_mag, 'label'):
             butter_hw_mag.label = 'mag'
         a, b = signal.butter(n, 1., btype='low', analog=True)
         filter_func = hw2hwmag(hs2hw(coefficients2hs(a, b[::-1], n=n)))
-        return filter_func(w)
+        return w, filter_func(w)
 
 
     def butter_hw_phase(w, n=4):
@@ -190,33 +170,56 @@ if __name__ == '__main__':
             butter_hw_phase.label = 'phase'
         a, b = signal.butter(n, 1., btype='low', analog=True)
         filter_func = hw2hwphase(hs2hw(coefficients2hs(a, b[::-1], n=n)))
-        return filter_func(w)
+        return w, filter_func(w)
 
 
-    def cheby_hw_mag(w, n=4, eps=1):
+    def cheby_hw_mag(w, n=4, eps=1.):
         n = int(n)
         if not hasattr(cheby_hw_mag, 'label'):
             cheby_hw_mag.label = 'mag'
         a, b = signal.cheby1(n, eps, 1., btype='low', analog=True)
         filter_func = hw2hwmag(hs2hw(coefficients2hs(a, b[::-1], n=n)))
-        return filter_func(w)
+        return w, filter_func(w)
 
 
-    def cheby_hw_phase(w, n=4, eps=1):
+    def cheby_hw_phase(w, n=4, eps=1.):
         n = int(n)
         if not hasattr(cheby_hw_phase, 'label'):
             cheby_hw_phase.label = 'phase'
         a, b = signal.cheby1(n, eps, 1., btype='low', analog=True)
         filter_func = hw2hwphase(hs2hw(coefficients2hs(a, b[::-1], n=n)))
-        return filter_func(w)
+        return w, filter_func(w)
 
 
-    pair = ((butter_hw_mag, {'n': (2, 10)}),
-            (butter_hw_phase, {'n': (2, 10)}),
-            (cheby_hw_mag, {'n': (2, 10), 'eps': (0.1, 5.)}),
-            (cheby_hw_phase, {'n': (2, 10), 'eps': (0.1, 5.)}))
+    def butter_hw_nyquist(w, n=4):
+        n = int(n)
+        if not hasattr(butter_hw_nyquist, 'label'):
+            butter_hw_nyquist.label = 'nyquist'
+        _, theta = butter_hw_phase(w, n=n)
+        _, r = butter_hw_mag(w, n=n)
+        return r * np.cos(theta), r * np.sin(theta)
+
+
+    def cheby_hw_nyquist(w, n=4, eps=1.):
+        n = int(n)
+        if not hasattr(cheby_hw_nyquist, 'label'):
+            cheby_hw_nyquist.label = 'nyquist'
+        _, theta = cheby_hw_phase(w, n=n, eps=eps)
+        _, r = cheby_hw_mag(w, n=n)
+        return r * np.cos(np.deg2rad(theta)), r * np.sin(np.deg2rad(theta))
+
+
+    pair = ((butter_hw_mag, {'n': (1, 10)}),
+            (butter_hw_phase, {'n': (1, 10)}),
+            (cheby_hw_mag, {'n': (1, 10), 'eps': (0.1, 5.)}),
+            (cheby_hw_phase, {'n': (1, 10), 'eps': (0.1, 5.)}),
+            (butter_hw_nyquist, {'n': (1, 10)}),
+            (cheby_hw_nyquist, {'n': (1, 10), 'eps': (0.1, 5.)}))
 
     # Start the application
-    w = GUI(pair, domain=np.logspace(-1, 5, 1000), log_scale=True, win_labels=('mag', 'phase', 'nyq'))
+    w = GUI(pair, domain=np.linspace(0, 5, 5000),
+            win_labels={'mag': ('Magnitude Response', 'w[rad/sec]', 'Magnitude'),
+                        'phase': ('Phase Response', 'w[rad/sec]', 'Phase[degree]'),
+                        'nyquist': ('Nyquist Plot', 'Amplitude', 'Amplitude')})
     w.show()
     sys.exit(app.exec_())
