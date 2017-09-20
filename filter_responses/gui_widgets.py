@@ -1,9 +1,5 @@
-# Author: zekeriyasari
-# Motivated by the post:
-#    <https://stackoverflow.com/questions/42007434/slider-widget-for-pyqtgraph>
-
 """
-:mod:`pyqtgraph` module for parametric plots of functions.
+:mod:`gui_widgets` module defines some of the widgets to be used in the GUI
 """
 
 import sys
@@ -23,16 +19,20 @@ class Slider(QWidget):
 
     Attributes
     ----------
-    minimum: int,
-        Minimum value of the slider.
-    maximum: int,
-        Maximum value of the slider.
-    name: str, optional
-        Name of the slider.
+    minimum : int, optional
+        Minimum value of the slider. (Default=0)
+    maximum : int, optional
+        Maximum value of the slider. (Default=1)
+    data_type : type, optional
+        Data of the slider data. If ``data_type`` is `int`, only integer slider values are  displayed. (Default=float)
+    name : str, optional
+        Name of the slider. (Default='')
+    color : str,
+        Color of the slider label.(Default='black')
     """
 
-    def __init__(self, minimum=0, maximum=1, data_type=float, name='', color='black', parent=None):
-        super(Slider, self).__init__(parent=parent)
+    def __init__(self, minimum=0, maximum=1, data_type=float, name='', color='black'):
+        super().__init__()
 
         self.name = name
         self.minimum = minimum
@@ -63,6 +63,14 @@ class Slider(QWidget):
         self.set_label_value(self.slider.value())
 
     def set_label_value(self, value):
+        """
+        Update slider value.
+        
+        Parameters
+        ----------
+        value : float
+            Value of the slider.
+        """
         self.value = self.minimum + (float(value) / (self.slider.maximum() - self.slider.minimum())) * (
             self.maximum - self.minimum)
         if self.data_type is int:
@@ -73,7 +81,14 @@ class Slider(QWidget):
 
 class SliderBlock(QWidget):
     """
-    Group of Sliders
+    Group of sliders.
+    
+    This class basically constructs a single widget bundling a couple of sliders together.
+    
+    Attributes
+    ----------
+    sliders : Tuple[Slider]
+        A tuple of sliders
     """
 
     def __init__(self, sliders):
@@ -90,7 +105,7 @@ class Widget(QWidget):
 
     Attributes
     ----------
-    pairs: Tuple[Tuple[callable, dict]]
+    pairs : Tuple[Tuple[callable, dict]]
         Tuple of functions and corresponding parameters. Consider that we are to plot the functions
 
         .. math ::
@@ -107,20 +122,27 @@ class Widget(QWidget):
 
         pairs = (f_1, {'\alpha_1': (m_{\alpha_1}, M_{\alpha_1}), \ldots, '\alpha_1': (m_{\alpha_K}, M_{\alpha_K})}
                 f_2, {'\beta_1': (m_{\beta_1}, M_{\beta_1}), \ldots, '\beta_1': (m_{\beta_K}, M_{\beta_K})})
-    domain: numpy.ndarray,
-        Domain of the functions of the to be plotted.
+    domain : numpy.ndarray, optional
+        Domain of the functions of the to be plotted.(Default=np.linspace(0, 5, 1000))
+    log_scale : bool, optional
+        If True, the plot x-scale is logarithmic. (Default=False)
     win_title: str, optional
-        Title of the GUI window.
+        Title of the GUI window. (Default='')
     plt_title: str, optional,
-        Title of the plots
+        Title of the plots. (Default='')
+    xlabel : str, optional
+        x-label of the plot. (Default='')
+    ylabel : str, optional
+        y-label of the plot. (Default='')
+        
     """
 
     def __init__(self, pairs, domain=np.linspace(0, 5, 1000), log_scale=False,
-                 win_title='', plt_title='', xlabel='', ylabel='', parent=None):
+                 win_title='', plt_title='', xlabel='', ylabel=''):
 
-        super(Widget, self).__init__(parent=parent)
+        super().__init__()
 
-        self.pairs = pairs  # Function and control parameters
+        self.pairs = pairs
         self.domain = domain
         self.log_scale = log_scale
         self.win_title = win_title
@@ -146,7 +168,7 @@ class Widget(QWidget):
                     self.palette.setLogMode(x=True, y=False)
                 pen_color = self.colors[np.random.randint(138)]
                 func.curve = self.palette.plot(pen=pen_color,
-                                               name=func.__name__)  # Plot the curve
+                                               name=func.__name__)  # Get func curve
                 func.sliders = []
                 for parameter, interval in params.items():
                     min_val, max_val = interval
@@ -163,16 +185,27 @@ class Widget(QWidget):
                 control_slider.slider.valueChanged.connect(lambda: self.update())
 
     def update(self):
+        """
+        Update the curve of the graphics windows.
+        
+        This method is the callback function of the sliders. If the value of the slider is changed, 
+        this method is called immediately. 
+        """
         for func in self.funcs:
+            # Get func curve and its control sliders
             curve = func.curve
             control_sliders = func.sliders
+
+            # Read func control sliders and wrap func accordingly.
             sig = signature(func)
             params = dict()
             for control_slider in control_sliders:
                 if control_slider.name in sig.parameters.keys():
                     params[control_slider.name] = control_slider.value
             func_ = partial(func, **params)
-            data = np.array([func_(x) for x in self.domain])  # Iterative calculation may be slow!
+
+            # Compute new data of the func curve and update the curve.
+            data = np.array([func_(x) for x in self.domain])
             curve.setData(x=self.domain, y=data)
 
 

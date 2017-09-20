@@ -1,7 +1,6 @@
-import sys
-import numpy as np
-from PyQt5.QtWidgets import QApplication
-
+"""
+:mod:`magnitude_response` module includes a GUI to compare the magnitude response of the lowpass filters.
+"""
 from filter_responses.gui_widgets import *
 
 # Launch the Qt application.
@@ -14,14 +13,14 @@ def butter_analytic(w, n=2):
 
     Parameters
     ----------
-    w : float,
+    w : numpy.ndarray,
         Frequency
-    n : int,
-        Filter order.
+    n : int, optional
+        Filter order.(Default=2)
 
     Returns
     -------
-    float,
+    numpy.ndarray
         Magnitude response at ``w``
 
     """
@@ -34,16 +33,16 @@ def cheby_analytic(w, n=2, ripple=0.5):
 
     Parameters
     ----------
-    w : float,
+    w : numpy.ndarray,
         Frequency
-    n : int,
-        Filter order
-    ripple : float
-        Filter ripple in dB
+    n : int, optional
+        Filter order. (Default=2)
+    ripple : float, optional
+        Filter ripple in decibels. (Default=0.5)
 
     Returns
     -------
-    float,
+    numpy.ndarray,
         Magnitude response at ``w``.
     """
     epsilon = np.sqrt(10 ** (ripple / 10) - 1)
@@ -62,7 +61,7 @@ pair = ((butter_analytic, {'n': (2, 10)}),
 # Start the application
 w = Widget(pair, domain=np.logspace(-1, 5, 1000), log_scale=True,
            win_title='Filter Responses', plt_title='Butterworth and Chebyshev Filters',
-           xlabel='w[log]', ylabel='Magnitude')
+           xlabel='w[rad/sec]', ylabel='Magnitude')
 w.show()
 sys.exit(app.exec_())
 
