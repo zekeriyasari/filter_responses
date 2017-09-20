@@ -2,13 +2,13 @@ import sys
 import numpy as np
 from PyQt5.QtWidgets import QApplication
 
-from filter_responses.single_window_gui import *
+from filter_responses.gui_widgets import *
 
 # Launch the Qt application.
 app = QApplication(sys.argv)
 
 
-def normal_butterworth(w, n=2):
+def butter_analytic(w, n=2):
     """
     :math:`n'{th}` order Butterworth low-pass filter with 1 rad/sec cutoff frequency.
 
@@ -28,7 +28,7 @@ def normal_butterworth(w, n=2):
     return 1 / np.sqrt(1 + w ** (2 * n))
 
 
-def normal_chebyshev(w, n=2, ripple=0.5):
+def cheby_analytic(w, n=2, ripple=0.5):
     """
     :math:`n^{th}` order Chebyshev low-pass filter with 1 rad/sec cuttoff frequency.
 
@@ -55,8 +55,8 @@ def normal_chebyshev(w, n=2, ripple=0.5):
 
 
 # Control sliders of test function.
-pair = ((normal_butterworth, {'n': (2, 10)}),
-        (normal_chebyshev, {'n': (2, 10), 'ripple': (0.1, 5)}))
+pair = ((butter_analytic, {'n': (2, 10)}),
+        (cheby_analytic, {'n': (2, 10), 'ripple': (0.1, 5)}))
 
 
 # Start the application

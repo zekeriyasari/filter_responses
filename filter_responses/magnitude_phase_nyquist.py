@@ -1,5 +1,6 @@
 # https://pythonspot.com/en/pyqt5-grid-layout/
-from filter_responses.single_window_gui import *
+from filter_responses.gui_widgets import *
+from filter_responses.filter_prototypes import *
 from PyQt5.QtWidgets import QGroupBox, QGridLayout
 
 
@@ -32,7 +33,7 @@ class GUI(QWidget):
                         func.sliders = []  # Function sliders to control parameters of func
                         for parameter, interval in params.items():
                             min_val, max_val = interval
-                            slider = Slider(min_val, max_val, name=parameter, color=pen_color)
+                            slider = Slider(min_val, max_val, name=parameter, color=pen_color, data_type=type(min_val))
                             # self.horizontalLayout.addWidget(slider)
                             func.sliders.append(slider)
                             self.gui_sliders.append(slider)
@@ -93,7 +94,8 @@ class GUI(QWidget):
                     if control_slider.name in sig.parameters.keys():
                         params[control_slider.name] = control_slider.value
                 func_ = partial(func, **params)
-                data = np.array([func_(x) for x in self.domain])  # Iterative calculation may be slow!
+                # data = np.array([func_(x) for x in self.domain]).flatten()  # Iterative calculation may be slow!
+                data = func_(self.domain)
                 curve.setData(x=self.domain, y=data)
 
 
@@ -154,24 +156,65 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
 
-    def normal_butterworth_mag(w, n=2):
-        normal_butterworth_mag.label = 'mag'
-        return 1 / np.sqrt(1 + w ** (2 * n))
+    # def normal_butterworth_mag(w, n=2):
+    #     normal_butterworth_mag.label = 'mag'
+    #     return 1 / np.sqrt(1 + w ** (2 * n))
+    #
+    #
+    # def normal_chebyshev_mag(w, n=2, ripple=0.5):
+    #     normal_chebyshev_mag.label = 'mag'
+    #     epsilon = np.sqrt(10 ** (ripple / 10) - 1)
+    #     if abs(w) <= 1:
+    #         cheby_poly = np.cos(n * np.arccos(w))
+    #     else:
+    #         cheby_poly = np.cosh(n * np.arccosh(w))
+    #     return 1 / np.sqrt(1 + (epsilon * cheby_poly) ** 2)
+    #     # Control sliders of test function.
 
 
-    def normal_chebyshev_mag(w, n=2, ripple=0.5):
-        normal_chebyshev_mag.label = 'mag'
-        epsilon = np.sqrt(10 ** (ripple / 10) - 1)
-        if abs(w) <= 1:
-            cheby_poly = np.cos(n * np.arccos(w))
-        else:
-            cheby_poly = np.cosh(n * np.arccosh(w))
-        return 1 / np.sqrt(1 + (epsilon * cheby_poly) ** 2)
-        # Control sliders of test function.
+    # pair = ((normal_butterworth_mag, {'n': (2, 10)}),
+    #         (normal_chebyshev_mag, {'n': (2, 10), 'ripple': (0.1, 5)}))
+
+    def butter_hw_mag(w, n=4):
+        n = int(n)
+        if not hasattr(butter_hw_mag, 'label'):
+            butter_hw_mag.label = 'mag'
+        a, b = signal.butter(n, 1., btype='low', analog=True)
+        filter_func = hw2hwmag(hs2hw(coefficients2hs(a, b[::-1], n=n)))
+        return filter_func(w)
 
 
-    pair = ((normal_butterworth_mag, {'n': (2, 10)}),
-            (normal_chebyshev_mag, {'n': (2, 10), 'ripple': (0.1, 5)}))
+    def butter_hw_phase(w, n=4):
+        n = int(n)
+        if not hasattr(butter_hw_phase, 'label'):
+            butter_hw_phase.label = 'phase'
+        a, b = signal.butter(n, 1., btype='low', analog=True)
+        filter_func = hw2hwphase(hs2hw(coefficients2hs(a, b[::-1], n=n)))
+        return filter_func(w)
+
+
+    def cheby_hw_mag(w, n=4, eps=1):
+        n = int(n)
+        if not hasattr(cheby_hw_mag, 'label'):
+            cheby_hw_mag.label = 'mag'
+        a, b = signal.cheby1(n, eps, 1., btype='low', analog=True)
+        filter_func = hw2hwmag(hs2hw(coefficients2hs(a, b[::-1], n=n)))
+        return filter_func(w)
+
+
+    def cheby_hw_phase(w, n=4, eps=1):
+        n = int(n)
+        if not hasattr(cheby_hw_phase, 'label'):
+            cheby_hw_phase.label = 'phase'
+        a, b = signal.cheby1(n, eps, 1., btype='low', analog=True)
+        filter_func = hw2hwphase(hs2hw(coefficients2hs(a, b[::-1], n=n)))
+        return filter_func(w)
+
+
+    pair = ((butter_hw_mag, {'n': (2, 10)}),
+            (butter_hw_phase, {'n': (2, 10)}),
+            (cheby_hw_mag, {'n': (2, 10), 'eps': (0.1, 5.)}),
+            (cheby_hw_phase, {'n': (2, 10), 'eps': (0.1, 5.)}))
 
     # Start the application
     w = GUI(pair, domain=np.logspace(-1, 5, 1000), log_scale=True, win_labels=('mag', 'phase', 'nyq'))

@@ -31,12 +31,13 @@ class Slider(QWidget):
         Name of the slider.
     """
 
-    def __init__(self, minimum=0, maximum=1, name='', color='black', parent=None):
+    def __init__(self, minimum=0, maximum=1, data_type=float, name='', color='black', parent=None):
         super(Slider, self).__init__(parent=parent)
 
         self.name = name
         self.minimum = minimum
         self.maximum = maximum
+        self.data_type = data_type
         self.value = None
         self.color = color
 
@@ -47,10 +48,10 @@ class Slider(QWidget):
 
         self.verticalLayout.addWidget(self.label)
 
-        spacerItem = QSpacerItem(0, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        spacerItem = QSpacerItem(0, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
 
-        spacerItem1 = QSpacerItem(0, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        spacerItem1 = QSpacerItem(0, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
 
         self.slider.setOrientation(Qt.Vertical)
@@ -64,6 +65,8 @@ class Slider(QWidget):
     def set_label_value(self, value):
         self.value = self.minimum + (float(value) / (self.slider.maximum() - self.slider.minimum())) * (
             self.maximum - self.minimum)
+        if self.data_type is int:
+            self.value = int(self.value)
         self.label.setText("{0}={1:.4g}".format(self.name, self.value))
         self.label.setStyleSheet('color: ' + self.color)
 
